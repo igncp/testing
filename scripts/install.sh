@@ -11,3 +11,4 @@ set -e
 (cd projects/redux-toolkit && npm i)
 (cd projects/prisma && npm i)
 (cd projects/recoil && npm i)
+(cd projects/ramda && npm i)

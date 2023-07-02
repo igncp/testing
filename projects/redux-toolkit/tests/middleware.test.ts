@@ -60,6 +60,8 @@ describe("getDefaultMiddleware", () => {
       // The state is mutated before dispatching
       store.getState().foo = "baz";
 
+      // The expect is dynamic in this case
+      // eslint-disable-next-line jest/valid-expect
       let expectation: any = expect(() => {
         store.dispatch({ type: "any" });
       });

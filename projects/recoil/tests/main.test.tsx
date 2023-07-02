@@ -1,12 +1,15 @@
 import {
   atom,
   atomFamily,
+  isRecoilValue,
   RecoilLoadable,
   RecoilRoot,
   selector,
   useRecoilState,
+  useRecoilTransaction_UNSTABLE,
   useRecoilValue,
 } from "recoil";
+import { Subject } from "rxjs";
 import React, { useEffect } from "react";
 import { act, fireEvent, render, screen } from "@testing-library/react";
 import { Form, RecoilObserver } from "./test-utils";
@@ -142,4 +145,107 @@ describe("Loadable", () => {
     expect(loadable1.state).toBe("loading");
     expect(await loadable1.toPromise()).toEqual([1, 2, 3]);
   });
+});
+
+describe("useRecoilTransaction_UNSTABLE", () => {
+  it("performs all updates specified inside the transacion in one render", () => {
+    const headingState = atom({
+      key: "heading",
+      default: 1,
+    });
+    const positionState = atom({
+      key: "position",
+      default: { x: 1, y: 1 },
+    });
+
+    const emitter = new Subject<number>();
+    const sentinel = jest.fn();
+
+    type Props = {
+      useOnRender?: (props: {
+        position: typeof positionState["__tag"][number];
+        heading: typeof headingState["__tag"][number];
+        goForward: (distance: number) => void;
+      }) => void;
+    };
+
+    const Comp = ({ useOnRender }: Props) => {
+      const position = useRecoilValue(positionState);
+      const heading = useRecoilValue(headingState);
+
+      const goForward = useRecoilTransaction_UNSTABLE(
+        ({ get, set }) =>
+          (distance: number) => {
+            const heading = get(headingState);
+            const position = get(positionState);
+            set(positionState, {
+              x: position.x + Math.cos(heading) * distance,
+              y: position.y + Math.sin(heading) * distance,
+            });
+            set(headingState, heading + 1);
+          }
+      );
+
+      useOnRender?.({ position, heading, goForward });
+
+      return null;
+    };
+
+    render(
+      <RecoilRoot>
+        <Comp
+          useOnRender={({ goForward, position, heading }) => {
+            useEffect(() => {
+              const subscription = emitter.subscribe((distance) => {
+                goForward(distance);
+              });
+
+              return () => {
+                subscription.unsubscribe();
+              };
+            }, []);
+
+            sentinel({ position, heading });
+          }}
+        />
+      </RecoilRoot>
+    );
+
+    const getLastCall = () => sentinel.mock.calls.slice(-1)[0]?.[0];
+
+    expect(getLastCall()).toEqual({ position: { x: 1, y: 1 }, heading: 1 });
+
+    act(() => {
+      emitter.next(10);
+    });
+
+    expect(getLastCall()).toEqual({
+      position: { x: expect.closeTo(6.403, 3), y: expect.closeTo(9.415, 3) },
+      heading: 2,
+    });
+
+    // There was only one extra render even if multiple atom values were
+    // updated
+    expect(sentinel.mock.calls.length).toEqual(2);
+  });
+});
+
+test("isRecoilValue", () => {
+  const counter = atom({
+    key: "myCounter",
+    default: 0,
+  });
+
+  const strCounter = selector({
+    key: "myCounterStr",
+    get: ({ get }) => String(get(counter)),
+  });
+
+  expect(isRecoilValue(counter)).toEqual(true);
+
+  // Selectors are also considered recoil values
+  expect(isRecoilValue(strCounter)).toEqual(true);
+
+  expect(isRecoilValue(5)).toEqual(false);
+  expect(isRecoilValue({})).toEqual(false);
 });

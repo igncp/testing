@@ -9,7 +9,8 @@ import {
 describe("autoBatchEnhancer", () => {
   it.each([[true], [false]] as [boolean][])(
     "delays notifying an action when enabled: %s",
-    // @ts-expect-error
+    // @ts-expect-error The `done` is not well supported in types, but it is
+    // used and without it the test would not finish
     (enabled: boolean, done: any) => {
       jest.useFakeTimers();
 
@@ -50,8 +51,8 @@ describe("autoBatchEnhancer", () => {
         sentinel(store.getState().value);
       });
 
-      // If the delayed action happens first, the subscriber function would only
-      // called once, so putting it after
+      // If the delayed action happens first, the subscriber function would
+      // only be called once, so putting it after
       store.dispatch(remove());
       store.dispatch(add());
 

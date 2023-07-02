@@ -21,7 +21,7 @@ describe("createAction", () => {
     const doFoo = createAction<"foo">("actionA");
 
     doFoo(
-      // @ts-expect-error
+      // @ts-expect-error The passed type only accepts "foo"
       "bar"
     );
 

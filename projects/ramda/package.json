@@ -1,0 +1,9 @@
+{
+  "scripts": {
+    "test": "jest"
+  },
+  "dependencies": {
+    "@types/ramda": "^0.29.3",
+    "ramda": "^0.29.0"
+  }
+}
