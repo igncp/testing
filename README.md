@@ -1,0 +1,1 @@
+Collection of automated tests. The purpose of this repository is to improve my knowledge about the tested libraries (new features, edge cases, etc.) and to try different testing setups and approaches.

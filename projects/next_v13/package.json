@@ -1,0 +1,16 @@
+{
+  "scripts": {
+    "build": "next build",
+    "dev": "next dev",
+    "full": "npm run build && npm run start",
+    "start": "next start",
+    "test": "playwright test"
+  },
+  "dependencies": {
+    "next": "^13.1.1",
+    "server-only": "^0.0.1"
+  },
+  "devDependencies": {
+    "@types/react": "18.0.26"
+  }
+}
