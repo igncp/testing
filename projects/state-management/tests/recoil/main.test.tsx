@@ -8,6 +8,7 @@ import {
   useRecoilState,
   useRecoilTransaction_UNSTABLE,
   useRecoilValue,
+  useResetRecoilState,
 } from "recoil";
 import { Subject } from "rxjs";
 import React, { useEffect } from "react";
@@ -230,22 +231,73 @@ describe("useRecoilTransaction_UNSTABLE", () => {
   });
 });
 
-test("isRecoilValue", () => {
-  const counter = atom({
-    key: "myCounter",
-    default: 0,
+describe("isRecoilValue", () => {
+  it("returns true for the expected types", () => {
+    const counter = atom({
+      key: "myCounter",
+      default: 0,
+    });
+
+    const strCounter = selector({
+      key: "myCounterStr",
+      get: ({ get }) => String(get(counter)),
+    });
+
+    expect(isRecoilValue(counter)).toEqual(true);
+
+    // Selectors are also considered recoil values
+    expect(isRecoilValue(strCounter)).toEqual(true);
+
+    expect(isRecoilValue(5)).toEqual(false);
+    expect(isRecoilValue({})).toEqual(false);
   });
+});
 
-  const strCounter = selector({
-    key: "myCounterStr",
-    get: ({ get }) => String(get(counter)),
+describe("useResetRecoilState", () => {
+  it("has no rerenders and performs the expected action", () => {
+    const renderSentinel = jest.fn();
+    const valueSentinel = jest.fn();
+
+    const counter = atom({
+      key: "useResetRecoilState:myCounter",
+      default: 0,
+    });
+
+    const Comp = ({ useOnRender }: { useOnRender: () => void }) => {
+      const reset = useResetRecoilState(counter);
+
+      useOnRender();
+
+      return <button onClick={reset}>Reset</button>;
+    };
+
+    const Comp2 = () => {
+      const [value, setValue] = useRecoilState(counter);
+      valueSentinel(value);
+      useEffect(() => {
+        setValue(1);
+      }, []);
+      return null;
+    };
+
+    render(
+      <RecoilRoot>
+        <Comp useOnRender={renderSentinel} />
+        <Comp2 />
+      </RecoilRoot>
+    );
+
+    // Only one initial render for Comp, and two for Comp2 which sets the value
+    expect(renderSentinel.mock.calls).toEqual([[]]);
+    expect(valueSentinel.mock.calls).toEqual([[0], [1]]);
+
+    const button = screen.getByText("Reset");
+
+    fireEvent.click(button);
+
+    // There are no extra renders for Comp, since it is not subscribed to the
+    // value. For Comp2 there is an extra render with the default value.
+    expect(renderSentinel.mock.calls).toEqual([[]]);
+    expect(valueSentinel.mock.calls).toEqual([[0], [1], [0]]);
   });
-
-  expect(isRecoilValue(counter)).toEqual(true);
-
-  // Selectors are also considered recoil values
-  expect(isRecoilValue(strCounter)).toEqual(true);
-
-  expect(isRecoilValue(5)).toEqual(false);
-  expect(isRecoilValue({})).toEqual(false);
 });

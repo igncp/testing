@@ -1,3 +1,6 @@
 Ideas of libraries to add tests to:
 
-- zod
+- react-query
+- trpc
+- relay
+- numeral
